@@ -23,7 +23,7 @@ type Options struct {
 
 type Node interface {
 	Connect(ctx context.Context, addr net.Addr) error
-	Serve(ctx context.Context) error
+	Serve(ctx context.Context, hws ...muxrpc.HandlerWrapper) error
 	GetListenAddr() net.Addr
 }
 
@@ -67,7 +67,7 @@ func NewNode(opts Options) (Node, error) {
 	return n, nil
 }
 
-func (n *node) handleConnection(ctx context.Context, conn net.Conn) {
+func (n *node) handleConnection(ctx context.Context, conn net.Conn, hws ...muxrpc.HandlerWrapper) {
 	n.connTracker.OnAccept(conn)
 	defer n.connTracker.OnClose(conn)
 
@@ -75,6 +75,10 @@ func (n *node) handleConnection(ctx context.Context, conn net.Conn) {
 	if err != nil {
 		n.log.Log("func", "handleConnection", "op", "MakeHandler", "error", err.Error(), "peer", conn.RemoteAddr())
 		return
+	}
+
+	for _, hw := range hws {
+		h = hw(h)
 	}
 
 	pkr := muxrpc.NewPacker(conn)
@@ -86,7 +90,7 @@ func (n *node) handleConnection(ctx context.Context, conn net.Conn) {
 	}
 }
 
-func (n *node) Serve(ctx context.Context) error {
+func (n *node) Serve(ctx context.Context, hws ...muxrpc.HandlerWrapper) error {
 	for {
 		conn, err := n.l.Accept()
 		if err != nil {
@@ -104,7 +108,7 @@ func (n *node) Serve(ctx context.Context) error {
 		}
 
 		go func(c net.Conn) {
-			n.handleConnection(ctx, c)
+			n.handleConnection(ctx, c, hws...)
 		}(conn)
 	}
 }

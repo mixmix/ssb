@@ -72,6 +72,8 @@ go.cryptoscope.co/margaret v0.0.7-0.20181024232335-8aade736de7e h1:ajZLamvmduaH9
 go.cryptoscope.co/margaret v0.0.7-0.20181024232335-8aade736de7e/go.mod h1:W+Q6lvzHIrF8+Yt3dItHHsx2R9/Xvj/NkJGM8QLM2l4=
 go.cryptoscope.co/muxrpc v0.0.0-20181007003539-601b7be81ee6 h1:5qfD/BXlgKUow/g1XEC2tQNmDLJUVilaOMh/am1t8p4=
 go.cryptoscope.co/muxrpc v0.0.0-20181007003539-601b7be81ee6/go.mod h1:IXBvE9fZ+NNjD6PI8HTEROe0RV5HPb5yi7UEGcwBH+8=
+go.cryptoscope.co/muxrpc v1.3.0-beta1 h1:70Ta7RdqfZL5J2RFiaz05yPbeY5qHVcieTvZXjv0IeA=
+go.cryptoscope.co/muxrpc v1.3.0-beta1/go.mod h1:IXBvE9fZ+NNjD6PI8HTEROe0RV5HPb5yi7UEGcwBH+8=
 go.cryptoscope.co/netwrap v0.0.0-20180427130219-dae5b5bc35c3 h1:jmVmhJws6zjq94Szb1ZCr3s0WRYCCfudWLuMwtbmY5o=
 go.cryptoscope.co/netwrap v0.0.0-20180427130219-dae5b5bc35c3/go.mod h1:arPOz1SB/sunS41F1iBgMgkx4fRhKkG221uUMjzkAqc=
 go.cryptoscope.co/secretstream v1.1.0 h1:8fKiiXt4PATt8DTs4AR9J3opk9qmjRR7JDAbsWkavig=

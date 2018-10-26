@@ -13,6 +13,7 @@ import (
 
 	"github.com/cryptix/go/logging"
 
+	"go.cryptoscope.co/muxrpc"
 	"go.cryptoscope.co/ssb"
 	mksbot "go.cryptoscope.co/ssb/sbot"
 
@@ -124,7 +125,7 @@ func main() {
 
 	log.Log("event", "serving", "ID", id.Ref(), "addr", listenAddr)
 	for {
-		err = sbot.Node.Serve(ctx)
+		err = sbot.Node.Serve(ctx, muxrpc.Throttle(500, 0))
 		log.Log("event", "sbot node.Serve returned", "err", err)
 		time.Sleep(1 * time.Second)
 	}
