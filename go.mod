@@ -1,13 +1,11 @@
 module go.cryptoscope.co/ssb
 
 require (
-	github.com/AndreasBriese/bbloom v0.0.0-20180913140656-343706a395b7 // indirect
 	github.com/VividCortex/gohistogram v1.0.0 // indirect
 	github.com/agl/ed25519 v0.0.0-20170116200512-5312a6153412
 	github.com/catherinejones/testdiff v0.0.0-20180525195050-ae148f75f077
 	github.com/cryptix/go v1.3.2
-	github.com/dgraph-io/badger v1.5.4
-	github.com/dgryski/go-farm v0.0.0-20190104051053-3adb47b1fb0f // indirect
+	github.com/dgraph-io/badger v1.5.5-0.20181004181505-439fd464b155
 	github.com/go-kit/kit v0.8.0
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/keks/nocomment v0.0.0-20181007001506-30c6dcb4a472
@@ -38,3 +36,4 @@ require (
 	gonum.org/v1/netlib v0.0.0-20190119082159-9be13e02fd56 // indirect
 	gopkg.in/urfave/cli.v2 v2.0.0-20180128182452-d3ae77c26ac8
 )
+

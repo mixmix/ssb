@@ -125,11 +125,6 @@ func (b *builder) Build() (*Graph, error) {
 			from := ssb.FeedRef{Algo: "ed25519", ID: k[:32]}
 			to := ssb.FeedRef{Algo: "ed25519", ID: k[33:]}
 
-			v, err := it.Value()
-			if err != nil {
-				return errors.Wrap(err, "friends: couldn't get idx value")
-			}
-
 			var bfrom [32]byte
 			copy(bfrom[:], from.ID)
 			nFrom, has := known[bfrom]
@@ -148,16 +143,23 @@ func (b *builder) Build() (*Graph, error) {
 				known[bto] = nTo
 			}
 
-			w := math.Inf(-1)
-			if len(v) >= 1 && v[0] == '1' {
-				w = 1
-			} else {
-				w = math.Inf(1)
-			}
-
 			if nFrom.ID() == nTo.ID() {
 				continue
 			}
+
+			w := math.Inf(-1)
+			err := it.Value(func(v []byte) error {
+				if len(v) >= 1 && v[0] == '1' {
+					w = 1
+				} else {
+					w = math.Inf(1)
+				}
+				return nil
+			})
+			if err != nil {
+				return errors.Wrap(err, "failed to get value from iter")
+			}
+
 			edg := simple.WeightedEdge{F: nFrom, T: nTo, W: w}
 			dg.SetWeightedEdge(edg)
 		}
@@ -199,13 +201,17 @@ func (b *builder) Follows(fr *ssb.FeedRef) ([]*ssb.FeedRef, error) {
 				Algo: "ed25519",
 				ID:   k[33:],
 			}
-			v, err := it.Value()
+
+			err := it.Value(func(v []byte) error {
+				if len(v) >= 1 && v[0] == '1' {
+					friends = append(friends, &c)
+				}
+				return nil
+			})
 			if err != nil {
-				return errors.Wrap(err, "friends: counldnt get idx value")
+				return errors.Wrap(err, "failed to get value from iter")
 			}
-			if len(v) >= 1 && v[0] == '1' {
-				friends = append(friends, &c)
-			}
+
 		}
 		return nil
 	})

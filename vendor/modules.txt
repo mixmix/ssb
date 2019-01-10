@@ -13,7 +13,7 @@ github.com/cryptix/go/logging
 github.com/cryptix/go/logging/logtest
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/dgraph-io/badger v1.5.4
+# github.com/dgraph-io/badger v1.5.5-0.20181004181505-439fd464b155
 github.com/dgraph-io/badger
 github.com/dgraph-io/badger/options
 github.com/dgraph-io/badger/protos
