@@ -28,10 +28,10 @@ func OpenContacts(log kitlog.Logger, r repo.Interface) (graph.Builder, func(cont
 	nextServe := func(ctx context.Context, log margaret.Log) error {
 		err := serve(ctx, log)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "contacts: serving log failed")
 		}
 
-		return db.Close()
+		return errors.Wrap(db.Close(), "contacts: closing badger db failed")
 	}
 
 	return bldr, nextServe, nil

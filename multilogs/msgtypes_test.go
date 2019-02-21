@@ -36,11 +36,11 @@ func TestMessageTypes(t *testing.T) {
 	tRootLog, err := repo.OpenLog(tRepo)
 	r.NoError(err)
 
-	uf, _, serveUF, err := OpenUserFeeds(tRepo)
+	uf, serveUF, err := OpenUserFeeds(tRepo)
 	r.NoError(err)
 	ufErrc := serveLog(ctx, "user feeds", tRootLog, serveUF)
 
-	mt, _, serveMT, err := OpenMessageTypes(tRepo)
+	mt, serveMT, err := OpenMessageTypes(tRepo)
 	r.NoError(err)
 	mtErrc := serveLog(ctx, "message types", tRootLog, serveMT)
 

@@ -3,7 +3,6 @@ package multilogs
 import (
 	"context"
 
-	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
 
 	"go.cryptoscope.co/librarian"
@@ -13,7 +12,7 @@ import (
 	"go.cryptoscope.co/ssb/repo"
 )
 
-func OpenUserFeeds(r repo.Interface) (multilog.MultiLog, *badger.DB, func(context.Context, margaret.Log) error, error) {
+func OpenUserFeeds(r repo.Interface) (multilog.MultiLog, func(context.Context, margaret.Log) error, error) {
 	return repo.OpenMultiLog(r, "userFeeds", func(ctx context.Context, seq margaret.Seq, value interface{}, mlog multilog.MultiLog) error {
 		msg, ok := value.(message.StoredMessage)
 		if !ok {

@@ -72,7 +72,7 @@ func TestMakeSomeMessages(t *testing.T) {
 	r.NoError(err, "failed to get log seq")
 	r.Equal(margaret.BaseSeq(-1), seq, "not empty")
 
-	userFeeds, _, userFeedsServe, err := OpenUserFeeds(testRepo)
+	userFeeds, userFeedsServe, err := OpenUserFeeds(testRepo)
 	r.NoError(err, "failed to get user feeds multilog")
 
 	ctx, cancel := ctxutils.WithError(context.Background(), ssb.ErrShuttingDown)

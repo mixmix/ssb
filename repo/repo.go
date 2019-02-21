@@ -38,17 +38,17 @@ func (r repo) GetPath(rel ...string) string {
 //
 // Exposes the badger db for 100% hackability. This will go away in future versions!
 // badger + librarian as index
-func OpenMultiLog(r Interface, name string, f multilog.Func) (multilog.MultiLog, *badger.DB, func(context.Context, margaret.Log) error, error) {
+func OpenMultiLog(r Interface, name string, f multilog.Func) (multilog.MultiLog, func(context.Context, margaret.Log) error, error) {
 
 	dbPath := r.GetPath("sublogs", name, "db")
 	err := os.MkdirAll(dbPath, 0700)
 	if err != nil {
-		return nil, nil, nil, errors.Wrapf(err, "mkdir error for %q", dbPath)
+		return nil, nil, errors.Wrapf(err, "mkdir error for %q", dbPath)
 	}
 
 	db, err := badger.Open(badgerOpts(dbPath))
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "db/idx: badger failed to open")
+		return nil, nil, errors.Wrap(err, "db/idx: badger failed to open")
 	}
 
 	mlog := multibadger.New(db, msgpack.New(margaret.BaseSeq(0)))
@@ -60,7 +60,7 @@ func OpenMultiLog(r Interface, name string, f multilog.Func) (multilog.MultiLog,
 	}
 	idxStateFile, err := os.OpenFile(statePath, mode, 0700)
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "error opening state file")
+		return nil, nil, errors.Wrap(err, "error opening state file")
 	}
 
 	mlogSink := multilog.NewSink(idxStateFile, mlog, f)
@@ -75,18 +75,17 @@ func OpenMultiLog(r Interface, name string, f multilog.Func) (multilog.MultiLog,
 		*/
 		src, err := rootLog.Query(margaret.Live(true), margaret.SeqWrap(true), mlogSink.QuerySpec())
 		if err != nil {
-			return errors.Wrap(err, "error querying rootLog for mlog")
+			return errors.Wrap(err, "multilog: error querying rootLog for mlog")
 		}
 
 		err = luigi.Pump(ctx, mlogSink, src)
 		if err == ssb.ErrShuttingDown {
 			return nil
 		}
-
-		return errors.Wrap(err, "error reading query for mlog")
+		return errors.Wrap(err, "multilog: error reading query for mlog")
 	}
 
-	return mlog, db, serve, nil
+	return mlog, serve, nil
 }
 
 func OpenIndex(r Interface, name string, f func(librarian.Index) librarian.SinkIndex) (librarian.Index, *badger.DB, func(context.Context, margaret.Log) error, error) {

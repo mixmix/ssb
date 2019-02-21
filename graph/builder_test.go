@@ -36,7 +36,7 @@ func makeBadger(t *testing.T) testStore {
 	r.NoError(err)
 	// TODO: try this
 	// tRootLog := mem.New()
-	uf, _, serveUF, err := multilogs.OpenUserFeeds(tRepo)
+	uf, serveUF, err := multilogs.OpenUserFeeds(tRepo)
 	r.NoError(err)
 	ufErrc := serveLog(ctx, "user feeds", tRootLog, serveUF)
 
@@ -82,7 +82,7 @@ func makeTypedLog(t *testing.T) testStore {
 	tRootLog, err := repo.OpenLog(tRepo)
 	r.NoError(err)
 
-	uf, _, serveUF, err := multilogs.OpenUserFeeds(tRepo)
+	uf, serveUF, err := multilogs.OpenUserFeeds(tRepo)
 	r.NoError(err)
 	ufErrc := serveLog(ctx, "user feeds", tRootLog, serveUF)
 
@@ -90,7 +90,7 @@ func makeTypedLog(t *testing.T) testStore {
 	tc.root = tRootLog
 	tc.userLogs = uf
 
-	mt, _, serveMT, err := multilogs.OpenMessageTypes(tRepo)
+	mt, serveMT, err := multilogs.OpenMessageTypes(tRepo)
 	r.NoError(err, "sbot: failed to open message type sublogs")
 	mtErrc := serveLog(ctx, "type logs", tRootLog, serveMT)
 

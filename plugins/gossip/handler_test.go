@@ -78,7 +78,7 @@ func (tc *tcase) runTest(t *testing.T) {
 		r.NoError(err, "error closing src root log")
 	}()
 
-	srcMlog, _, srcMlogServe, err := multilogs.OpenUserFeeds(srcRepo)
+	srcMlog, srcMlogServe, err := multilogs.OpenUserFeeds(srcRepo)
 	r.NoError(err, "error getting src userfeeds multilog")
 	defer func() {
 		err := srcMlog.Close()
@@ -109,7 +109,7 @@ func (tc *tcase) runTest(t *testing.T) {
 		r.NoError(err, "error closing dst root log")
 	}()
 
-	dstMlog, _, dstMlogServe, err := multilogs.OpenUserFeeds(dstRepo)
+	dstMlog, dstMlogServe, err := multilogs.OpenUserFeeds(dstRepo)
 	r.NoError(err, "error getting dst userfeeds multilog")
 	defer func() {
 		err := dstMlog.Close()
@@ -241,7 +241,7 @@ func BenchmarkReplicate(b *testing.B) {
 	srcRootLog, err := repo.OpenLog(srcRepo)
 	r.NoError(err)
 
-	srcMlog, _, srcMlogServe, err := multilogs.OpenUserFeeds(srcRepo)
+	srcMlog, srcMlogServe, err := multilogs.OpenUserFeeds(srcRepo)
 	r.NoError(err)
 
 	wg.Add(1)
@@ -268,7 +268,7 @@ func BenchmarkReplicate(b *testing.B) {
 		r.NoError(err)
 		dstRootLog, _ := repo.OpenLog(dstRepo)
 		r.NoError(err)
-		dstMlog, _, dstMlogServe, _ := multilogs.OpenUserFeeds(dstRepo)
+		dstMlog, dstMlogServe, _ := multilogs.OpenUserFeeds(dstRepo)
 		r.NoError(err)
 
 		wg.Add(1)

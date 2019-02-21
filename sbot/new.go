@@ -68,7 +68,7 @@ func initSbot(s *Sbot) (*Sbot, error) {
 	}
 	s.RootLog = rootLog
 
-	uf, _, serveUF, err := multilogs.OpenUserFeeds(r)
+	uf, serveUF, err := multilogs.OpenUserFeeds(r)
 	if err != nil {
 		return nil, errors.Wrap(err, "sbot: failed to open user sublogs")
 	}
