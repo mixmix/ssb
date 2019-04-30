@@ -34,6 +34,11 @@ func (h *handler) pourFeed(ctx context.Context, req *muxrpc.Request) error {
 		return nil // only handle valid feed refs
 	}
 
+	path, _ := l.Dist(feedRef)
+	if len(path) == 0 || len(path) > h.hopCount {
+		return errors.Errorf("feed out of reach")
+	}
+
 	// check what we got
 	userLog, err := h.UserFeeds.Get(librarian.Addr(feedRef.ID))
 	if err != nil {

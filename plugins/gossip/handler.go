@@ -165,7 +165,26 @@ func (g *handler) HandleCall(ctx context.Context, req *muxrpc.Request, edp muxrp
 			checkAndClose(errors.Errorf("createHistoryStream: wrong tipe. %s", req.Type))
 			return
 		}
-		if err := g.pourFeed(ctx, req); err != nil {
+		// TODO: find a way to cache the lookup for the muxrpc session, not build it on individual calls
+		graph, err := g.GraphBuilder.Build()
+		if err != nil {
+			checkAndClose(err)
+			return
+		}
+
+		remote, err := ssb.GetFeedRefFromAddr(edp.Remote())
+		if err != nil {
+			checkAndClose(err)
+			return
+		}
+
+		l, err := graph.MakeDijkstra(remote)
+		if err != nil {
+			checkAndClose(err)
+			return
+		}
+
+		if err := g.pourFeed(ctx, req, l); err != nil {
 			checkAndClose(errors.Wrap(err, "createHistoryStream failed"))
 			return
 		}
