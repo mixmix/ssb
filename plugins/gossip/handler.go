@@ -2,6 +2,7 @@ package gossip
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -12,8 +13,6 @@ import (
 	"go.cryptoscope.co/margaret"
 	"go.cryptoscope.co/margaret/multilog"
 	"go.cryptoscope.co/muxrpc"
-	"go.cryptoscope.co/netwrap"
-	"go.cryptoscope.co/secretstream"
 	"go.cryptoscope.co/ssb"
 	"go.cryptoscope.co/ssb/graph"
 )
@@ -30,6 +29,12 @@ type handler struct {
 
 	activeLock  sync.Mutex
 	activeFetch sync.Map
+	// TOOD: sync.Map is useless here
+	// use normal map activeFetch map[[32]byte]struct{}
+
+	// this map caches the graph auth lookup tree for multiple calls
+	distLookupLock sync.Mutex
+	distLookup     map[[32]byte]*graph.Lookup
 
 	hanlderDone func()
 
@@ -59,20 +64,19 @@ func (g *handler) HandleConnect(ctx context.Context, e muxrpc.Endpoint) {
 		g.Info.Log("fetchFeed", "done self")
 	}
 
-	if g.promisc {
-		remote := e.(muxrpc.Server).Remote()
-		remoteAddr, ok := netwrap.GetAddr(remote, "shs-bs").(secretstream.Addr)
-		if !ok {
-			return
-		}
-		remoteRef := &ssb.FeedRef{
-			Algo: "ed25519",
-			ID:   remoteAddr.PubKey,
-		}
+	g.distLookupLock.Lock()
+	remoteRef, err := ssb.GetFeedRefFromAddr(e.Remote())
+	if err != nil {
+		g.Info.Log("handleConnect", "no remote ref", "err", err)
+		g.distLookupLock.Unlock()
+		return
+	}
 
+	if g.promisc {
 		hasCallee, err := multilog.Has(g.UserFeeds, librarian.Addr(remoteRef.ID))
 		if err != nil {
 			g.Info.Log("handleConnect", "multilog.Has(callee)", "ref", remoteRef.Ref(), "err", err)
+			g.distLookupLock.Unlock()
 			return
 		}
 
@@ -80,6 +84,7 @@ func (g *handler) HandleConnect(ctx context.Context, e muxrpc.Endpoint) {
 			g.Info.Log("handleConnect", "oops - dont have calling feed. requesting")
 			if err := g.fetchFeed(ctx, remoteRef, e); err != nil {
 				g.Info.Log("handleConnect", "fetchFeed callee failed", "ref", remoteRef.Ref(), "err", err)
+				g.distLookupLock.Unlock()
 				return
 			}
 			g.Info.Log("fetchFeed", "done callee", "ref", remoteRef.Ref())
@@ -90,19 +95,33 @@ func (g *handler) HandleConnect(ctx context.Context, e muxrpc.Endpoint) {
 	// or pass rootCtx to their constructor but than we can't cancel sessions
 	select {
 	case <-ctx.Done():
+		g.distLookupLock.Unlock()
 		return
 	default:
 	}
 
-	ufaddrs, err := g.UserFeeds.List()
+	tGraph, err := g.GraphBuilder.Build()
 	if err != nil {
-		g.Info.Log("handleConnect", "UserFeeds listing failed", "err", err)
+		g.Info.Log("handleConnect", "fetchFeed hops listing", "err", err)
+		g.distLookupLock.Unlock()
 		return
 	}
 
-	tGraph, err := g.GraphBuilder.Build()
+	lookup, err := tGraph.MakeDijkstra(remoteRef)
 	if err != nil {
-		g.Info.Log("handleConnect", "fetchFeed follows listing", "err", err)
+		g.Info.Log("handleConnect", "fetchFeed hops listing", "err", err)
+		g.distLookupLock.Unlock()
+		return
+	}
+
+	var k [32]byte
+	copy(k[:], remoteRef.ID)
+	g.distLookup[k] = lookup
+	g.distLookupLock.Unlock()
+
+	ufaddrs, err := g.UserFeeds.List()
+	if err != nil {
+		g.Info.Log("handleConnect", "UserFeeds listing failed", "err", err)
 		return
 	}
 
@@ -137,7 +156,6 @@ func (g *handler) check(err error) {
 }
 
 func (g *handler) HandleCall(ctx context.Context, req *muxrpc.Request, edp muxrpc.Endpoint) {
-	// g.Info.Log("event", "onCall", "args", fmt.Sprintf("%v", req.Args), "method", req.Method)
 	if req.Type == "" {
 		req.Type = "async"
 	}
@@ -165,26 +183,26 @@ func (g *handler) HandleCall(ctx context.Context, req *muxrpc.Request, edp muxrp
 			checkAndClose(errors.Errorf("createHistoryStream: wrong tipe. %s", req.Type))
 			return
 		}
-		// TODO: find a way to cache the lookup for the muxrpc session, not build it on individual calls
-		graph, err := g.GraphBuilder.Build()
+
+		g.distLookupLock.Lock()
+		remoteRef, err := ssb.GetFeedRefFromAddr(edp.Remote())
 		if err != nil {
 			checkAndClose(err)
+			g.distLookupLock.Lock()
 			return
 		}
 
-		remote, err := ssb.GetFeedRefFromAddr(edp.Remote())
-		if err != nil {
-			checkAndClose(err)
+		var k [32]byte
+		copy(k[:], remoteRef.ID)
+		lookup, ok := g.distLookup[k]
+		if !ok {
+			checkAndClose(fmt.Errorf("no lookup for remote"))
+			g.distLookupLock.Lock()
 			return
 		}
+		g.distLookupLock.Unlock()
 
-		l, err := graph.MakeDijkstra(remote)
-		if err != nil {
-			checkAndClose(err)
-			return
-		}
-
-		if err := g.pourFeed(ctx, req, l); err != nil {
+		if err := g.pourFeed(ctx, req, lookup); err != nil {
 			checkAndClose(errors.Wrap(err, "createHistoryStream failed"))
 			return
 		}
