@@ -26,7 +26,7 @@ func TestContentFeedFromGo(t *testing.T) {
 		rpc.on('closed', () => {
 			t.comment('now should have feed:' + fromKey)
 			pull(
-				sbot.contentStream.createBlobHandlerSource({id: fromKey}),
+				sbot.contentStream.getContentStream({id: fromKey}),
 				pull.collect((err, msgs) => {
 					t.error(err)
 					console.warn('BHC: '+msgs.length)
@@ -38,11 +38,7 @@ func TestContentFeedFromGo(t *testing.T) {
 		setTimeout(() => {
 			t.comment('now should have feed:' + fromKey)
 			pull(
-				sbot.contentStream.createSource({id: fromKey}),
-				sbot.contentStream.createBlobHandler((err, blobNum) => {
-					t.error(err)
-					console.warn('Blobs:'+ blobNum)
-				}),
+				sbot.contentStream.getContentStream({id: fromKey}),
 				pull.collect((err, msgs) => {
 					t.error(err)
 					console.warn('Messages: '+msgs.length)
