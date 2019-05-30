@@ -54,9 +54,10 @@ type Sbot struct {
 	KeyPair          *ssb.KeyPair
 	RootLog          margaret.Log
 	liveIndexUpdates bool
-	UserFeeds        multilog.MultiLog
-	MessageTypes     multilog.MultiLog
-	PrivateLogs      multilog.MultiLog
+	// TODO: make configurable
+	UserFeeds    multilog.MultiLog
+	MessageTypes multilog.MultiLog
+	PrivateLogs  multilog.MultiLog
 	// AboutStore   indexes.AboutStore
 	PublishLog     margaret.Log
 	signHMACsecret []byte

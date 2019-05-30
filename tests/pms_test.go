@@ -61,7 +61,7 @@ func TestPrivMsgsFromGo(t *testing.T) {
 
 		sbot.friends.get({src: alice.id, dest: fromKey}, function(err, val) {
 			t.error(err, 'friends.get of new contact')
-			t.equals(val[alice.id], true, 'is following')
+			t.equals(val[alice.id], true, 'is following:'+JSON.stringify(val))
 
 			t.comment('shouldnt have bobs feed:' + fromKey)
 			pull(

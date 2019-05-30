@@ -3,8 +3,9 @@ package multilogs
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -23,13 +24,10 @@ func TestSignMessages(t *testing.T) {
 	r := require.New(t)
 	a := assert.New(t)
 
-	rpath, err := ioutil.TempDir("", t.Name())
-	r.NoError(err)
+	rpath := filepath.Join("testrun", t.Name())
+	os.RemoveAll(rpath)
 
 	testRepo := repo.New(rpath)
-
-	_, err = repo.OpenKeyPair(testRepo)
-	r.NoError(err, "failed to open key pair")
 
 	rl, err := repo.OpenLog(testRepo)
 	r.NoError(err, "failed to open root log")
@@ -104,5 +102,6 @@ func TestSignMessages(t *testing.T) {
 		a.NotNil(storedMsg.Raw, "msg:%d - raw", i)
 		a.Contains(string(storedMsg.Raw), `"signature": "`)
 		a.Contains(string(storedMsg.Raw), fmt.Sprintf(`"sequence": %d`, i+1))
+		a.Nil(storedMsg.Offchain)
 	}
 }

@@ -136,19 +136,16 @@ func initSbot(s *Sbot) (*Sbot, error) {
 	id := s.KeyPair.Id
 	auth := s.GraphBuilder.Authorizer(id, int(s.hopCount))
 
+	var pubopts []multilogs.PublishOption
 	if s.signHMACsecret != nil {
-		publishLog, err := multilogs.OpenPublishLogWithHMAC(s.RootLog, s.UserFeeds, *s.KeyPair, s.signHMACsecret)
-		if err != nil {
-			return nil, errors.Wrap(err, "sbot: failed to create publish log with hmac")
-		}
-		s.PublishLog = publishLog
-	} else {
-		publishLog, err := multilogs.OpenPublishLog(s.RootLog, s.UserFeeds, *s.KeyPair)
-		if err != nil {
-			return nil, errors.Wrap(err, "sbot: failed to create publish log")
-		}
-		s.PublishLog = publishLog
+		pubopts = append(pubopts, multilogs.SetHMACKey(s.signHMACsecret))
 	}
+	pubopts = append(pubopts, multilogs.EnableOffchain(true))
+	publishLog, err := multilogs.OpenPublishLog(s.RootLog, s.UserFeeds, *s.KeyPair, pubopts...)
+	if err != nil {
+		return nil, errors.Wrap(err, "sbot: failed to create publish log")
+	}
+	s.PublishLog = publishLog
 
 	pl, _, servePrivs, err := multilogs.OpenPrivateRead(kitlog.With(log, "module", "privLogs"), r, s.KeyPair)
 	if err != nil {

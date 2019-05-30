@@ -2,8 +2,6 @@ package tests
 
 import (
 	"encoding/json"
-	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -155,20 +153,10 @@ func TestContentFeedFromGo(t *testing.T) {
 
 	alice := ts.startJSBot(before, "")
 
-	n := 5
-	brs := make([]*ssb.BlobRef, n)
-	for i := 0; i < n; i++ {
-		var err error
-		blobMsg := fmt.Sprintf(`{ "type": "hello", "world": true, "i": %d}`, i)
-		brs[i], err = s.BlobStore.Put(strings.NewReader(blobMsg))
-		r.NoError(err)
-		// t.Log(brs[i].Ref())
-	}
-
 	var tmsgs = []interface{}{
 		map[string]interface{}{
-			"type": "blob-message",
-			"blob": brs[0].Ref(),
+			"type":  "ex-message",
+			"hello": "world",
 		},
 		map[string]interface{}{
 			"type":      "contact",
@@ -176,40 +164,29 @@ func TestContentFeedFromGo(t *testing.T) {
 			"following": true,
 		},
 		map[string]interface{}{
-			"type":  "about",
-			"about": alice.Ref(),
-			"image": brs[3].Ref(),
+			"type":  "message",
+			"text":  "whoops",
+			"fault": true,
 		},
-		map[string]interface{}{
-			"type": "text",
-			"text": `# hello world!`,
-			"blob": brs[1].Ref(),
-		},
-		map[string]interface{}{
-			"type": "blob",
-			"blob": brs[2].Ref(),
-		},
-		// brs[3],
-		// brs[4],
 	}
 	for i, msg := range tmsgs {
 		newSeq, err := s.PublishLog.Append(msg)
 		r.NoError(err, "failed to publish test message %d", i)
 		r.NotNil(newSeq)
 	}
-	t.Fail()
+
 	<-ts.doneJS
 
 	aliceLog, err := s.UserFeeds.Get(librarian.Addr(alice.ID))
 	r.NoError(err)
 
-	seqMsg, err := aliceLog.Get(margaret.BaseSeq(1))
+	seqMsg, err := aliceLog.Get(margaret.BaseSeq(2))
 	r.NoError(err)
 	msg, err := s.RootLog.Get(seqMsg.(margaret.BaseSeq))
 	r.NoError(err)
 	storedMsg, ok := msg.(message.StoredMessage)
 	r.True(ok, "wrong type of message: %T", msg)
-	r.Equal(storedMsg.Sequence, margaret.BaseSeq(2))
+	r.Equal(storedMsg.Sequence, margaret.BaseSeq(3))
 
 	ts.wait()
 }

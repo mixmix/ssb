@@ -1,6 +1,11 @@
 package multilogs
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/json"
+	"fmt"
+	"io"
 	"log"
 	"sync"
 	"time"
@@ -21,6 +26,9 @@ type publishLog struct {
 	rootLog margaret.Log
 	key     ssb.KeyPair
 	hmac    *[32]byte
+
+	offchain     bool
+	setTimestamp bool
 }
 
 /* Get retreives the message object by traversing the authors sublog to the root log
@@ -42,24 +50,43 @@ TODO: do the same for Query()? but how?
 
 => just overwrite publish on the authorLog for now
 */
-
-func (pl publishLog) Append(val interface{}) (margaret.Seq, error) {
+func (pl *publishLog) Append(val interface{}) (margaret.Seq, error) {
 	pl.Lock()
 	defer pl.Unlock()
 
+	// prepare persisted message
+	var stored message.StoredMessage
+	stored.Timestamp = time.Now() // "rx"
+	stored.Author = pl.key.Id
+
 	// set metadata
 	var newMsg message.LegacyMessage
-
-	// TODO: user control, if they want to expose a timestamp would be cool
-
-	newMsg.Timestamp = time.Now().UnixNano() / 1000000
-	// or .Unix() * 1000 but needs to be ascending between calls
-	// the requirement is supposed to be lifted but I don't want to depend on it _right now_
-	// it's on my errata for shs2
-
 	newMsg.Author = pl.key.Id.Ref()
 	newMsg.Hash = "sha256"
-	newMsg.Content = val
+
+	if pl.setTimestamp {
+		newMsg.Timestamp = time.Now().UnixNano() / 1000000
+	}
+
+	if pl.offchain {
+		buf := new(bytes.Buffer)
+		h := sha256.New()
+
+		enc := json.NewEncoder(io.MultiWriter(buf, h))
+		if err := enc.Encode(val); err != nil {
+			return nil, errors.Wrap(err, "publishLog: failed to encode offchain msg")
+		}
+
+		or := &ssb.OffchainRef{
+			Hash: h.Sum(nil),
+			Algo: ssb.RefAlgoSHA256,
+		}
+
+		stored.Offchain = buf.Bytes()
+		newMsg.Content = or.Ref()
+	} else {
+		newMsg.Content = val
+	}
 
 	// current state of the local sig-chain
 	currSeq, err := pl.Seq().Value()
@@ -94,9 +121,6 @@ func (pl publishLog) Append(val interface{}) (margaret.Seq, error) {
 		return nil, err
 	}
 
-	var stored message.StoredMessage
-	stored.Timestamp = time.Now() // "rx"
-	stored.Author = pl.key.Id
 	stored.Previous = newMsg.Previous
 	stored.Sequence = newMsg.Sequence
 	stored.Key = mr
@@ -118,22 +142,8 @@ func (pl publishLog) Append(val interface{}) (margaret.Seq, error) {
 // these messages are constructed in the legacy SSB way: The poured object is JSON v8-like pretty printed and then NaCL signed,
 // then it's pretty printed again (now with the signature inside the message) to construct it's SHA256 hash,
 // which is used to reference it (by replys and it's previous)
-func OpenPublishLog(rootLog margaret.Log, sublogs multilog.MultiLog, kp ssb.KeyPair) (margaret.Log, error) {
-	return openPublish(rootLog, sublogs, kp)
-}
+func OpenPublishLog(rootLog margaret.Log, sublogs multilog.MultiLog, kp ssb.KeyPair, opts ...PublishOption) (margaret.Log, error) {
 
-func OpenPublishLogWithHMAC(rootLog margaret.Log, sublogs multilog.MultiLog, kp ssb.KeyPair, hmackey []byte) (margaret.Log, error) {
-	pl, err := openPublish(rootLog, sublogs, kp)
-	if n := len(hmackey); n != 32 {
-		return nil, errors.Errorf("publish/hmac: wrong hmackey length (%d)", n)
-	}
-	var hmacSec [32]byte
-	copy(hmacSec[:], hmackey)
-	pl.hmac = &hmacSec
-	return pl, err
-}
-
-func openPublish(rootLog margaret.Log, sublogs multilog.MultiLog, kp ssb.KeyPair) (*publishLog, error) {
 	if sublogs == nil {
 		return nil, errors.Errorf("no sublog for publish")
 	}
@@ -142,9 +152,44 @@ func openPublish(rootLog margaret.Log, sublogs multilog.MultiLog, kp ssb.KeyPair
 		return nil, errors.Wrap(err, "publish: failed to open sublog for author")
 	}
 
-	return &publishLog{
+	pl := &publishLog{
 		Log:     authorLog,
 		rootLog: rootLog,
 		key:     kp,
-	}, nil
+	}
+
+	for i, o := range opts {
+		if err := o(pl); err != nil {
+			return nil, errors.Wrapf(err, "publish: option %d failed", i)
+		}
+	}
+
+	return pl, nil
+}
+
+type PublishOption func(*publishLog) error
+
+func SetHMACKey(hmackey []byte) PublishOption {
+	return func(pl *publishLog) error {
+		var hmacSec [32]byte
+		if n := copy(hmacSec[:], hmackey); n != 32 {
+			return fmt.Errorf("hmac key of wrong length:%d", n)
+		}
+		pl.hmac = &hmacSec
+		return nil
+	}
+}
+
+func EnableOffchain(yes bool) PublishOption {
+	return func(pl *publishLog) error {
+		pl.offchain = yes
+		return nil
+	}
+}
+
+func UseNowTimestamps(yes bool) PublishOption {
+	return func(pl *publishLog) error {
+		pl.setTimestamp = yes
+		return nil
+	}
 }

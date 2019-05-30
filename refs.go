@@ -63,7 +63,7 @@ func ParseRef(str string) (Ref, error) {
 
 	switch str[0:1] {
 	case "@":
-		if split[1] != "ed25519" {
+		if split[1] != RefAlgoEd25519 {
 			return nil, ErrInvalidRefAlgo
 		}
 		if n := len(raw); n != 32 {
@@ -74,7 +74,7 @@ func ParseRef(str string) (Ref, error) {
 			Algo: RefAlgoEd25519,
 		}, nil
 	case "%":
-		if split[1] != "sha256" {
+		if split[1] != RefAlgoSHA256 {
 			return nil, ErrInvalidRefAlgo
 		}
 		if n := len(raw); n != 32 {
@@ -85,7 +85,7 @@ func ParseRef(str string) (Ref, error) {
 			Algo: RefAlgoSHA256,
 		}, nil
 	case "&":
-		if split[1] != "sha256" {
+		if split[1] != RefAlgoSHA256 {
 			return nil, ErrInvalidRefAlgo
 		}
 		if n := len(raw); n != 32 {
@@ -120,6 +120,15 @@ type MessageRef struct {
 
 func (ref MessageRef) Ref() string {
 	return fmt.Sprintf("%%%s.%s", base64.StdEncoding.EncodeToString(ref.Hash), ref.Algo)
+}
+
+type OffchainRef struct {
+	Hash []byte
+	Algo string
+}
+
+func (ref OffchainRef) Ref() string {
+	return fmt.Sprintf("%s.%s.offchain", base64.StdEncoding.EncodeToString(ref.Hash), ref.Algo)
 }
 
 type FeedRef struct {
@@ -226,7 +235,7 @@ func (r *MessageRef) Scan(raw interface{}) error {
 			return errors.Errorf("msgRef/Scan: wrong length: %d", len(v))
 		}
 		r.Hash = v
-		r.Algo = "sha256"
+		r.Algo = RefAlgoSHA256
 	case string:
 		mr, err := ParseMessageRef(v)
 		if err != nil {

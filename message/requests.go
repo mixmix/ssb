@@ -98,6 +98,7 @@ type StoredMessage struct {
 	Sequence  margaret.BaseSeq
 	Timestamp time.Time
 	Raw       []byte // the original message for gossiping see ssb.EncodePreserveOrdering for why
+	Offchain  []byte
 }
 
 func (sm StoredMessage) String() string {
