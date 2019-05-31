@@ -63,25 +63,38 @@ func NewBuilder(log kitlog.Logger, db *badger.DB) Builder {
 		}
 
 		msg := val.(message.StoredMessage)
-		var dmsg message.DeserializedMessage
-		err := json.Unmarshal(msg.Raw, &dmsg)
-		if err != nil {
-			err = errors.Wrapf(err, "db/idx contacts: first json unmarshal failed (msg: %s)", msg.Key.Ref())
-			log.Log("msg", "skipped contact message", "reason", err)
-			return nil
-		}
-
 		var c ssb.Contact
-		err = json.Unmarshal(dmsg.Content, &c)
-		if err != nil {
-			if ssb.IsMessageUnusable(err) {
+
+		if len(msg.Offchain) > 0 {
+			err := json.Unmarshal(msg.Offchain, &c)
+			if err != nil {
+				if ssb.IsMessageUnusable(err) {
+					return nil
+				}
+				log.Log("msg", "skipped contact message", "reason", err, "key", msg.Key.Ref())
 				return nil
 			}
-			log.Log("msg", "skipped contact message", "reason", err, "key", msg.Key.Ref())
-			return nil
+		} else {
+			var dmsg message.DeserializedMessage
+			err := json.Unmarshal(msg.Raw, &dmsg)
+			if err != nil {
+				err = errors.Wrapf(err, "db/idx contacts: first json unmarshal failed (msg: %s)", msg.Key.Ref())
+				log.Log("msg", "skipped contact message", "reason", err)
+				return nil
+			}
+
+			err = json.Unmarshal(dmsg.Content, &c)
+			if err != nil {
+				if ssb.IsMessageUnusable(err) {
+					return nil
+				}
+				log.Log("msg", "skipped contact message", "reason", err, "key", msg.Key.Ref())
+				return nil
+			}
 		}
 
-		addr := append(dmsg.Author.ID, ':')
+		var err error
+		addr := append(msg.Author.ID, ':')
 		addr = append(addr, c.Contact.ID...)
 		switch {
 		case c.Following:

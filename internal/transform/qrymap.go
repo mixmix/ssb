@@ -16,6 +16,11 @@ func NewKeyValueWrapper(src luigi.Source, wrap bool) luigi.Source {
 		if !ok {
 			return nil, errors.Errorf("wrong message type. expected %T - got %T", storedMsg, v)
 		}
+
+		if len(storedMsg.Offchain) > 0 {
+			return nil, errors.Errorf("wrong wrapper for offchain message")
+		}
+
 		if !wrap {
 			return storedMsg.Raw, nil
 		}
